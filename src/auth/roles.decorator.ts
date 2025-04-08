@@ -1,5 +1,8 @@
 import { SetMetadata } from '@nestjs/common';
-import { Role } from '../auth/enums/role.enum';
 
 export const ROLES_KEY = 'roles';
-export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
+
+// Make the decorator accept any enum type
+export function Roles<T>(...roles: T[]): MethodDecorator & ClassDecorator {
+  return SetMetadata(ROLES_KEY, roles);
+}

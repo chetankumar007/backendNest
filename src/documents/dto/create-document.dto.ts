@@ -3,9 +3,14 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateDocumentDto {
   @ApiProperty({ example: "Project Proposal", description: "Document title" })
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   title: string;
+
+  @ApiPropertyOptional({ description: "Document description" })
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @ApiPropertyOptional({ example: "This is a proposal for the new project...", description: "Document content" })
   @IsString()

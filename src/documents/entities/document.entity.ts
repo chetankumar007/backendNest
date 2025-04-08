@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  JoinColumn,
 } from "typeorm";
 import { User } from "../../users/entities/user.entity";
 
@@ -16,17 +17,23 @@ export class Document {
   @Column()
   title: string;
 
-  @Column({ type: "text", nullable: true })
-  content: string;
-
   @Column({ nullable: true })
-  filePath: string;
+  description: string;
 
-  @Column({ nullable: true })
-  fileType: string;
+  @Column()
+  fileName: string;
 
-  @Column({ nullable: true })
+  @Column()
+  originalName: string;
+
+  @Column()
+  mimeType: string;
+
+  @Column('bigint')
   fileSize: number;
+
+  @Column()
+  filePath: string;
 
   @Column({ default: false })
   isPublic: boolean;
@@ -37,7 +44,8 @@ export class Document {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, user => user.documents)
+  @JoinColumn({ name: 'ownerId' })
   owner: User;
 
   @Column()

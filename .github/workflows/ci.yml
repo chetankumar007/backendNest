@@ -1,0 +1,97 @@
+name: NestJS CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: document_management_test
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Cache the build output to speed up future runs
+      - name: Cache build
+        uses: actions/cache@v3
+        with:
+          path: |
+            dist
+            node_modules/.cache
+          key: ${{ runner.os }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run linting
+        run: npm run lint
+        continue-on-error: true # Optional: continue even if linting fails
+
+      # Add security scanning
+      - name: Run npm audit
+        run: npm audit --production
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: root
+          DB_DATABASE: document_management_test
+          JWT_SECRET: test_jwt_secret_for_ci
+          NODE_ENV: test
+
+      # Generate test coverage explicitly
+      - name: Generate test coverage
+        run: npm run test:cov
+        if: success()
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/
+        if: always() # Upload coverage even if tests fail
+
+      # Add a summary of the test results
+      - name: Test Summary
+        run: |
+          echo "### Test Results :test_tube:" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Unit tests and E2E tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "📊 Coverage report available as an artifact" >> $GITHUB_STEP_SUMMARY
+        if: success()
