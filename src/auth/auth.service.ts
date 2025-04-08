@@ -23,10 +23,27 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { email: user.email, sub: user.id };
-
+    const payload = { 
+      email: user.email, 
+      sub: user.id,
+      isAdmin: user.isAdmin 
+    };
+    
     return {
       access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isAdmin: user.isAdmin,
+      },
     };
+  }
+
+  async logout(user: any) {
+    // In a stateless JWT approach, the client simply discards the token
+    // For a more secure approach, you could implement a token blacklist
+    return { message: 'Logout successful' };
   }
 }

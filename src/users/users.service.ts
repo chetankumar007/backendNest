@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -53,19 +54,42 @@ export class UsersService {
     return user || undefined;
   }
 
+  async findByEmail(email: string): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { email } });
+    
+    if (!user) {
+      throw new NotFoundException(`User with email ${email} not found`);
+    }
+    
+    return user;
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-
+    
+    // If password is being updated, hash it
     if (updateUserDto.password) {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
-
-    await this.usersRepository.update(id, updateUserDto);
-    return this.findOne(id);
+    
+    Object.assign(user, updateUserDto);
+    
+    return this.usersRepository.save(user);
   }
 
-  async remove(id: string): Promise<void> {
+  async updateRole(id: string, updateUserRoleDto: UpdateUserRoleDto): Promise<User> {
     const user = await this.findOne(id);
+    
+    Object.assign(user, updateUserRoleDto);
+    
+    return this.usersRepository.save(user);
+  }
+
+  async remove(id: string): Promise<{ message: string }> {
+    const user = await this.findOne(id);
+    
     await this.usersRepository.remove(user);
+    
+    return { message: `User with ID ${id} has been deleted` };
   }
 }
