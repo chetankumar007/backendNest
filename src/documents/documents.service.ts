@@ -101,4 +101,20 @@ export class DocumentsService {
 
     await this.documentsRepository.remove(document);
   }
+
+  async uploadFile(id: string, fileData: any, userId: string, isAdmin: boolean): Promise<Document> {
+    const document = await this.findOne(id, userId, isAdmin);
+    
+    // Check if user has permission to update this document
+    if (!isAdmin && document.ownerId !== userId) {
+      throw new ForbiddenException('You do not have permission to update this document');
+    }
+    
+    // Update document with file information
+    document.filePath = fileData.path;
+    document.fileType = fileData.mimetype;
+    document.fileSize = fileData.size;
+    
+    return this.documentsRepository.save(document);
+  }
 }

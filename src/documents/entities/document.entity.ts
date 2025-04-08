@@ -16,11 +16,17 @@ export class Document {
   @Column()
   title: string;
 
-  @Column({ type: "text" })
+  @Column({ type: "text", nullable: true })
   content: string;
 
   @Column({ nullable: true })
-  fileUrl: string;
+  filePath: string;
+
+  @Column({ nullable: true })
+  fileType: string;
+
+  @Column({ nullable: true })
+  fileSize: number;
 
   @Column({ default: false })
   isPublic: boolean;
@@ -31,7 +37,7 @@ export class Document {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => User, (user) => user.documents)
+  @ManyToOne(() => User, { eager: true })
   owner: User;
 
   @Column()

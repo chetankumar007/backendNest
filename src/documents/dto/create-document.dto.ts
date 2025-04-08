@@ -1,26 +1,30 @@
 import { IsNotEmpty, IsString, IsOptional, IsBoolean } from "class-validator";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateDocumentDto {
-  @ApiProperty({ example: "Project Proposal" })
+  @ApiProperty({ example: "Project Proposal", description: "Document title" })
   @IsString()
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ example: "This is a proposal for the new project..." })
+  @ApiPropertyOptional({ example: "This is a proposal for the new project...", description: "Document content" })
   @IsString()
-  @IsNotEmpty()
-  content: string;
+  @IsOptional()
+  content?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: "https://storage.example.com/file.pdf",
-    required: false,
+    description: "URL to the document file"
   })
   @IsString()
   @IsOptional()
   fileUrl?: string;
 
-  @ApiProperty({ example: false, default: false })
+  @ApiPropertyOptional({ 
+    example: false, 
+    default: false,
+    description: "Whether the document is publicly accessible" 
+  })
   @IsBoolean()
   @IsOptional()
   isPublic?: boolean;

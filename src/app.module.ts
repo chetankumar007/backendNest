@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ClassSerializerInterceptor } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { DocumentsModule } from './documents/documents.module';
@@ -16,28 +20,31 @@ import { Document } from './documents/entities/document.entity';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        console.log('Database config:', {
-          host: configService.get('DB_HOST'),
-          port: configService.get('DB_PORT'),
-          username: configService.get('DB_USERNAME'),
-          database: configService.get('DB_DATABASE'),
-        });
-
-        return {
-          type: 'postgres',
+        const dbConfig = {
+          type: 'postgres' as const, // Type assertion to fix the error
           host: configService.get('DB_HOST', 'localhost'),
-          port: configService.get<number>('DB_PORT', 5432),
+          port: parseInt(configService.get('DB_PORT', '5432')),
           username: configService.get('DB_USERNAME', 'postgres'),
           password: configService.get('DB_PASSWORD', 'postgres'),
           database: configService.get('DB_DATABASE', 'document_management'),
           entities: [User, Document],
-          synchronize: configService.get<boolean>('DB_SYNC', true),
+          synchronize: true,
         };
+        console.log('Database config:', dbConfig);
+        return dbConfig;
       },
     }),
     UsersModule,
     AuthModule,
     DocumentsModule,
+  ],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ClassSerializerInterceptor,
+    },
   ],
 })
 export class AppModule {}

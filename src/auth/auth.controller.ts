@@ -7,65 +7,68 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  UnauthorizedException,
-} from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { LocalAuthGuard } from "./guards/local-auth.guard";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
-import { RolesGuard } from "./guards/roles.guard";
-import { Roles } from "./decorators/roles.decorator";
-import { Role } from "./enums/role.enum";
-import { LoginDto } from "./dto/login.dto";
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
+} from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 
-@ApiTags("auth")
-@Controller("auth")
+@ApiTags('auth')
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post("login")
+  @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "User login" })
-  @ApiResponse({ status: 200, description: "Login successful, returns JWT token" })
-  @ApiResponse({ status: 401, description: "Invalid credentials" })
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful, returns JWT token',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiBody({ type: LoginDto })
   async login(@Body() loginDto: LoginDto) {
-    const { email, password } = loginDto;
-    const user = await this.authService.validateUser(email, password);
-
-    if (!user) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
-
-    return this.authService.login(user);
+    return this.authService.login(loginDto);
   }
 
-  @Post("logout")
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register new user' })
+  @ApiResponse({ status: 201, description: 'User successfully registered' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 409, description: 'User already exists' })
+  @ApiBody({ type: RegisterDto })
+  async register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
+  }
+
+  @Post('logout')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Logout user (invalidate token)" })
-  @ApiResponse({ status: 200, description: "Successfully logged out" })
-  async logout(@Request() req) {
-    return this.authService.logout(req.user);
+  @ApiOperation({ summary: 'Logout user' })
+  @ApiResponse({ status: 200, description: 'Successfully logged out' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  logout() {
+    // In a stateless JWT approach, the client simply discards the token
+    // For added security, you could implement a token blacklist
+    return { message: 'Logout successful' };
   }
 
-  @Get("profile")
+  @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get current user profile" })
-  @ApiResponse({ status: 200, description: "Return the current user" })
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'Return the current user' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   getProfile(@Request() req) {
     return req.user;
-  }
-
-  @Get("admin")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Admin only endpoint" })
-  @ApiResponse({ status: 200, description: "Admin access granted" })
-  @ApiResponse({ status: 403, description: "Forbidden resource" })
-  getAdminData() {
-    return { message: "Admin access granted" };
   }
 }

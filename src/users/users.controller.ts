@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   ForbiddenException,
   Request,
+  Query,
 } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./dto/create-user.dto";
@@ -25,6 +26,8 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from "@nestjs/swagger";
 
 @ApiTags("users")
@@ -43,13 +46,15 @@ export class UsersController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)  // Use Role.ADMIN instead of 'admin'
+  @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get all users (Admin only)" })
   @ApiResponse({ status: 200, description: "Return all users" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden - Admin only" })
-  findAll() {
-    return this.usersService.findAll();
+  @ApiQuery({ name: 'role', required: false, enum: Role })
+  findAll(@Query('role') role?: string) {
+    return this.usersService.findAll(role);
   }
 
   @Get("profile")
@@ -68,6 +73,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: "Return the user" })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 403, description: "Forbidden - Can only access own profile or admin required" })
+  @ApiParam({ name: 'id', description: 'User ID' })
   async findOne(@Param("id") id: string, @Request() req) {
     // Allow users to access their own profile or admins to access any profile
     if (req.user.id !== id && !req.user.isAdmin) {
@@ -83,6 +89,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: "User successfully updated" })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 403, description: "Forbidden - Can only update own profile or admin required" })
+  @ApiParam({ name: 'id', description: 'User ID' })
   async update(
     @Param("id") id: string, 
     @Body() updateUserDto: UpdateUserDto,
@@ -97,12 +104,14 @@ export class UsersController {
 
   @Patch(":id/role")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)  // Use Role.ADMIN instead of 'admin'
+  @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update a user's role (Admin only)" })
   @ApiResponse({ status: 200, description: "User role successfully updated" })
   @ApiResponse({ status: 404, description: "User not found" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden - Admin only" })
+  @ApiParam({ name: 'id', description: 'User ID' })
   updateRole(@Param("id") id: string, @Body() updateUserRoleDto: UpdateUserRoleDto) {
     return this.usersService.updateRole(id, updateUserRoleDto);
   }
@@ -114,11 +123,81 @@ export class UsersController {
   @ApiResponse({ status: 200, description: "User successfully deleted" })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 403, description: "Forbidden - Can only delete own account or admin required" })
+  @ApiParam({ name: 'id', description: 'User ID' })
   async remove(@Param("id") id: string, @Request() req) {
     // Allow users to delete their own account or admins to delete any account
     if (req.user.id !== id && !req.user.isAdmin) {
       throw new ForbiddenException("You can only delete your own account");
     }
+    return this.usersService.remove(id);
+  }
+
+  // Admin-only endpoints
+  @Get("admin/users")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin endpoint: Get all users" })
+  @ApiResponse({ status: 200, description: "Return all users" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Admin only" })
+  @ApiQuery({ name: 'role', required: false, enum: Role })
+  adminFindAll(@Query('role') role?: string) {
+    return this.usersService.findAll(role);
+  }
+
+  @Get("admin/users/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin endpoint: Get a user by ID" })
+  @ApiResponse({ status: 200, description: "Return the user" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Admin only" })
+  @ApiResponse({ status: 404, description: "User not found" })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  adminFindOne(@Param("id") id: string) {
+    return this.usersService.findOne(id);
+  }
+
+  @Post("admin/users")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin endpoint: Create a new user" })
+  @ApiResponse({ status: 201, description: "User created successfully" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Admin only" })
+  @ApiResponse({ status: 409, description: "Email already exists" })
+  adminCreate(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
+
+  @Patch("admin/users/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin endpoint: Update a user" })
+  @ApiResponse({ status: 200, description: "User updated successfully" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Admin only" })
+  @ApiResponse({ status: 404, description: "User not found" })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  adminUpdate(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
+  }
+
+  @Delete("admin/users/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin endpoint: Delete a user" })
+  @ApiResponse({ status: 200, description: "User deleted successfully" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden - Admin only" })
+  @ApiResponse({ status: 404, description: "User not found" })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  adminRemove(@Param("id") id: string) {
     return this.usersService.remove(id);
   }
 }
