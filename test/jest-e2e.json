@@ -6,7 +6,17 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
+  "setupFiles": ["<rootDir>/jest-setup.js"],
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/../src/$1"
+  },
   "globals": {
-    "API_PORT": 3001
+    "API_PORT": 3001,
+    "ts-jest": {
+      "isolatedModules": true
+    }
+  },
+  "testEnvironmentOptions": {
+    "customExportConditions": ["node", "node-addons"]
   }
 }
